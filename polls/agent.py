@@ -19,13 +19,29 @@ def generate_questions_node(state: AgentState):
     """Generate questions from document text"""
     print(f"\n🤖 AGENT: Generating questions (Attempt #{state['attempts'] + 1})...")
 
-    prompt = f"""Generate 5 quiz questions with answers from this text:
-    {state['document_text']}
+    prompt = f"""You are an expert educator creating comprehensive quiz questions.
 
-    Format each as:
-    Q: [question]
-    A: [answer]
-    """
+CRITICAL REQUIREMENTS:
+1. Read the ENTIRE document carefully before generating questions
+2. Identify ALL major topics, concepts, and key points in the document
+3. Generate questions that cover the FULL RANGE of material (beginning, middle, and end)
+4. DO NOT focus only on the beginning or one section
+5. Ensure questions test understanding of different concepts, not just one topic repeatedly
+
+Document to analyze:
+{state['document_text']}
+
+Generate exactly 5 high-quality quiz questions that:
+- Cover different sections of the material
+- Test different concepts/topics from the document
+- Range from basic recall to deeper understanding
+- Are clear and unambiguous
+- Have complete, accurate answers
+
+Format each as:
+Q: [question]
+A: [answer]
+"""
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -57,13 +73,29 @@ def evaluate_quality_node(state: AgentState):
 
     questions_text = "\n".join([f"Q: {q['question']}\nA: {q['answer']}" for q in state['questions']])
 
-    eval_prompt = f"""Evaluate these quiz questions on a scale of 1-10...
+    eval_prompt = f"""Evaluate these quiz questions based on:
 
-    Questions:
-    {questions_text}
+COVERAGE (most important):
+- Do questions cover different topics from the document?
+- Are multiple sections/concepts represented?
+- Or do all questions focus on just one small part?
 
-    Respond with ONLY a number from 1-10.
-    """
+QUALITY:
+- Are questions clear and well-written?
+- Are answers accurate and complete?
+- Do questions test understanding, not just memorization?
+
+Questions to evaluate:
+{questions_text}
+
+Rate from 1-10 where:
+- 1-3: Poor coverage (focuses on one topic only) or very low quality
+- 4-6: Partial coverage (misses major topics) or medium quality
+- 7-8: Good coverage (hits most topics) and good quality
+- 9-10: Excellent coverage (comprehensive) and excellent quality
+
+Respond with ONLY a number from 1-10.
+"""
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -77,7 +109,7 @@ def evaluate_quality_node(state: AgentState):
 
     print(f"📊 Quality Score: {score}/10")
 
-    # NEW: Keep track of best questions
+    # Keep track of best questions
     best_score = state.get("best_score", 0)
     if score > best_score:
         print(f"🎯 New best score! Saving these questions.")

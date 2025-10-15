@@ -1,46 +1,51 @@
 from django.shortcuts import render, redirect
 from .models import Note_set, Questions
-from .notes_ai import generate_questions
-from llama_index.core import SimpleDirectoryReader
+import pymupdf
 
-def index(request): # Request is sent by user
+
+def index(request):
     note_set = Note_set.objects.all()
-    dict = {
+    context = {
         'note_set': note_set
     }
-    return render(request, "polls/home.html", dict)
+    return render(request, "polls/home.html", context)
+
 
 def note_detail(request, id):
     note_set = Note_set.objects.get(id=id)
     questions = Questions.objects.filter(note_set=note_set)
-    dict = {
+    context = {
         'note_set': note_set,
         'questions': questions
     }
-    return render(request, "polls/details.html", dict)
+    return render(request, "polls/details.html", context)
 
 
 def generate_questions_view(request, id):
     note_set = Note_set.objects.get(id=id)
-
-    # text_content = note_set.content.read().decode('utf-8')
     Questions.objects.filter(note_set=note_set).delete()
+
     file_path = note_set.content.path
 
-    reader = SimpleDirectoryReader(input_files=[file_path])
-    documents = reader.load_data()
-    text_content = documents[0].text
+    # Extract text from PDF using OCR
+    extracted_text = ""
+    doc = pymupdf.open(file_path)
+    for page in doc:
+        textpage = page.get_textpage_ocr()
+        extracted_text += page.get_text(textpage=textpage)
+    doc.close()
 
+    # Generate questions using agent
     from .agent import create_agent_graph
     agent = create_agent_graph()
     result = agent.invoke({
-        "document_text": text_content,
+        "document_text": extracted_text,
         "questions": [],
         "quality_score": 0,
         "attempts": 0
     })
 
-    # Generate questions using AI
+    # Save generated questions
     for qa in result["best_questions"]:
         Questions.objects.create(
             note_set=note_set,
