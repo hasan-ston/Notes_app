@@ -50,8 +50,8 @@ Unlike simple API calls, this project implements true agent behavior:
 
 1. **Clone the repository**
 ```bash
-git clone <your-repo-url>
-cd mytasks
+git clone https://github.com/hasan-ston/Notes_app
+cd Notes_app
 ```
 
 2. **Create and activate virtual environment**
@@ -88,7 +88,7 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Visit `http://127.0.0.1:8000/home/` to use the app!
+Visit `http://127.0.0.1:8000/` to use the app!
 
 ## 📖 Usage
 
@@ -102,7 +102,7 @@ Visit `http://127.0.0.1:8000/home/` to use the app!
 
 ### Generating Questions
 
-1. Go to the home page (`/home/`)
+1. Go to the home page (`/`)
 2. Click on a note set
 3. Click "Generate Q&A" button
 4. Watch the terminal to see the agent working:
@@ -232,9 +232,6 @@ lsof -ti:8000 | xargs kill -9
 - [ ] Export questions to Anki/Quizlet
 - [ ] Multi-user support with authentication
 
-## 📝 License
-
-This project was built as a learning project for portfolio purposes.
 
 ## 👤 Author
 
