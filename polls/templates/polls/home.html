@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Study Notes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto p-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">📚 My Study Notes</h1>
+            <p class="text-gray-600">AI-powered question generation from your notes</p>
+        </div>
+
+        <!-- Note Sets Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for note in note_set %}
+            <a href="/details/{{ note.id }}/"
+               class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">
+                    {{ note.title }}
+                </h3>
+                <p class="text-sm text-gray-500">
+                    Uploaded: {{ note.uploaded_at|date:"M d, Y" }}
+                </p>
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Empty state if no notes -->
+        {% if not note_set %}
+        <div class="bg-white rounded-lg shadow-md p-12 text-center">
+            <p class="text-gray-500 text-lg">No notes uploaded yet</p>
+            <p class="text-gray-400 mt-2">Go to <a href="/admin/" class="text-blue-500 hover:underline">admin panel</a> to upload your first note</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
