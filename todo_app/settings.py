@@ -19,7 +19,7 @@ SECRET_KEY = 'django-insecure-qoc411r3)a6aurenhthfe2bn)^1k&448mu@whfmcky4uo+26pc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['hasan221.pythonanywhere.com', '127.0.0.1']
+ALLOWED_HOSTS = ['hasan221.pythonanywhere.com', '127.0.0.1', 'Notes_app.onrender.com']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
