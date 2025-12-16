@@ -111,6 +111,14 @@ Visit `http://127.0.0.1:8000/` to use the app!
    - Regenerating if score < 7/10
    - Keeping best questions across attempts
 
+### External API (for other services)
+
+You can call the agent over HTTP to integrate with other apps (e.g., ForStudents):
+
+- **Endpoint:** `POST /api/generate-questions/`
+- **Auth:** `X-Api-Key: <NOTES_API_KEY>` (set `NOTES_API_KEY` in your environment)
+- **Body options:** `note_id` (existing upload), `text` (raw text), `file` (PDF/TXT upload), or `file_url` (remote PDF/TXT). The endpoint extracts text and returns `{"questions": [{"question": "...", "answer": "..."}]}`.
+
 ## 🧠 How the Agent Works
 
 ### Agent Workflow

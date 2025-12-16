@@ -11,13 +11,16 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = 'django-insecure-qoc411r3)a6aurenhthfe2bn)^1k&448mu@whfmcky4uo+26pc'
+# In production set this via environment variable
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-qoc411r3)a6aurenhthfe2bn)^1k&448mu@whfmcky4uo+26pc')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ['true', '1', 'yes']
 
 ALLOWED_HOSTS = ['hasan221.pythonanywhere.com', '127.0.0.1', 'Notes_app.onrender.com', 'notes-app-7hqe.onrender.com']
 
@@ -116,4 +119,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # tells django to save it in media 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-GEMINI_API_KEY = "AIzaSyC0aSIfz5BR10LRWRlxXy1-poShNzHLMOA"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+NOTES_API_KEY = os.environ.get("NOTES_API_KEY", "")
