@@ -36,6 +36,7 @@
             </div>
             <button type="submit" class="w-full bg-teal-500 text-white font-semibold py-2.5 rounded-xl hover:-translate-y-0.5 transition shadow-lg shadow-teal-500/20">Login</button>
             <input type="hidden" name="next" value="{{ next }}">
+            <p class="text-sm text-slate-500 text-center">No account? <a href="{% url 'signup' %}" class="text-teal-600 hover:text-teal-700">Sign up</a></p>
         </form>
     </div>
 </body>
