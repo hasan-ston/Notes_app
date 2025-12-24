@@ -1,4 +1,5 @@
 from django.db import models # import django's module: models
+from django.conf import settings
 
 class Note_set(models.Model): # class is a blueprint. Note_set creates an instance(object) from it.
     # models.Model -> Accessing Model class from models
@@ -7,6 +8,7 @@ class Note_set(models.Model): # class is a blueprint. Note_set creates an instan
     subject = models.CharField(max_length=100, blank=True)
     content = models.FileField(upload_to='notes/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="note_sets")
 
     def __str__(self):  # Makes it easier to read things in admin shell
         return  self.title

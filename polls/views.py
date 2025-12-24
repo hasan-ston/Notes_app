@@ -6,6 +6,7 @@ import pymupdf
 import requests
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count
@@ -17,6 +18,7 @@ from django.views.decorators.http import require_POST, require_http_methods
 from .models import Note_set, Questions
 
 
+@login_required
 def index(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
@@ -25,20 +27,20 @@ def index(request):
         if not title or not uploaded_file:
             messages.error(request, "Title and file are required to create a flashcard set.")
         else:
-            Note_set.objects.create(title=title, subject=subject, content=uploaded_file)
+            Note_set.objects.create(title=title, subject=subject, content=uploaded_file, user=request.user)
             messages.success(request, "Note uploaded. You can now generate flashcards.")
         return redirect("home")
 
     subject_filter = request.GET.get("subject", "").strip()
-    note_set = Note_set.objects.all().order_by("-uploaded_at").prefetch_related("questions_set")
+    note_set = Note_set.objects.filter(user=request.user).order_by("-uploaded_at").prefetch_related("questions_set")
     if subject_filter:
         note_set = note_set.filter(subject__iexact=subject_filter)
 
-    subject_summary = Note_set.objects.values("subject").annotate(total=Count("id")).order_by("subject")
+    subject_summary = Note_set.objects.filter(user=request.user).values("subject").annotate(total=Count("id")).order_by("subject")
     stats = {
-        "notes": Note_set.objects.count(),
-        "questions": Questions.objects.count(),
-        "reviewed": Questions.objects.filter(reviewed=True).count(),
+        "notes": note_set.count(),
+        "questions": Questions.objects.filter(note_set__user=request.user).count(),
+        "reviewed": Questions.objects.filter(note_set__user=request.user, reviewed=True).count(),
     }
     context = {
         'note_set': note_set,
@@ -49,8 +51,9 @@ def index(request):
     return render(request, "polls/home.html", context)
 
 
+@login_required
 def note_detail(request, id):
-    note_set = get_object_or_404(Note_set, id=id)
+    note_set = get_object_or_404(Note_set, id=id, user=request.user)
     questions = Questions.objects.filter(note_set=note_set)
     reviewed_count = questions.filter(reviewed=True).count()
     progress = 0
@@ -100,8 +103,9 @@ def _generate_questions_from_text(extracted_text: str):
     return result.get("best_questions") or result.get("questions") or []
 
 
+@login_required
 def generate_questions_view(request, id):
-    note_set = get_object_or_404(Note_set, id=id)
+    note_set = get_object_or_404(Note_set, id=id, user=request.user)
 
     file_path = note_set.content.path
     extracted_text = _extract_text_from_path(file_path)
@@ -129,9 +133,10 @@ def generate_questions_view(request, id):
     return redirect('details', id=id)
 
 
+@login_required
 @require_POST
 def toggle_review(request, question_id):
-    question = get_object_or_404(Questions, id=question_id)
+    question = get_object_or_404(Questions, id=question_id, note_set__user=request.user)
     question.reviewed = not question.reviewed
     question.save(update_fields=['reviewed'])
     return redirect('details', id=question.note_set.id)
