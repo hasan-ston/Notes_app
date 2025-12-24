@@ -4,6 +4,7 @@ class Note_set(models.Model): # class is a blueprint. Note_set creates an instan
     # models.Model -> Accessing Model class from models
     # Inheriting from models.Model gives the class database functionality.
     title = models.CharField(max_length=100)
+    subject = models.CharField(max_length=100, blank=True)
     content = models.FileField(upload_to='notes/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 

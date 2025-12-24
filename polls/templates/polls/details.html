@@ -3,44 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{note_set.title}}</title>
+    <title>{{ note_set.title }} — Flashcards</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(15, 23, 42, 0.08); backdrop-filter: blur(8px); box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08); }
+        .hero-gradient { background: radial-gradient(circle at 20% 20%, rgba(45, 212, 191, 0.28), transparent 35%), radial-gradient(circle at 80% 0%, rgba(251, 191, 36, 0.25), transparent 30%), linear-gradient(135deg, #eef2ff 0%, #f8fafc 50%, #ecfeff 100%); }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="max-w-4xl mx-auto p-8">
-        <!-- Header -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h1 class="text-3xl font-bold text-gray-800 mb-4">{{note_set.title}}</h1>
-            <div class="flex gap-4">
-                <a href="{{ note_set.content.url }}" target="_blank"
-                   class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                    📄 View Notes
-                </a>
-
+<body class="min-h-screen">
+    <div class="hero-gradient absolute inset-0 -z-10"></div>
+    <div class="max-w-5xl mx-auto px-6 py-10 space-y-8 relative">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-[0.35em] text-amber-700">Subject · {{ note_set.subject|default_if_none:"General"|default:"General" }}</p>
+                <h1 class="text-4xl font-semibold mt-2 text-slate-900">{{ note_set.title }}</h1>
+                <p class="text-slate-600 mt-2 text-sm">Uploaded {{ note_set.uploaded_at|date:"M d, Y" }}</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{{ note_set.content.url }}" target="_blank" class="glass-card px-4 py-2 rounded-xl text-sm text-slate-800 hover:-translate-y-0.5 transition">📄 View Notes</a>
                 <form method="POST" action="{% url 'generate_questions' note_set.id %}">
                     {% csrf_token %}
-                    <button type="submit"
-                            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">
-                        ✨ Generate Q&A
-                    </button>
+                    <button type="submit" class="bg-teal-500 text-white font-semibold px-4 py-2 rounded-xl hover:-translate-y-0.5 transition shadow-lg shadow-teal-500/20">✨ Regenerate Q&A</button>
                 </form>
             </div>
-        </div>
+        </header>
 
-        <!-- Questions -->
-        <div class="space-y-4">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Questions</h2>
-            {% for question in questions %}
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <p class="text-lg font-semibold text-gray-800 mb-2">
-                    <span class="text-blue-600">Q:</span> {{question.question_text}}
-                </p>
-                <p class="text-gray-700">
-                    <span class="text-green-600 font-semibold">A:</span> {{question.answer_text}}
-                </p>
+        {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+            <div class="glass-card text-sm px-4 py-3 rounded-xl {% if message.tags == 'error' %}border-red-400/60 text-red-800 bg-red-50{% else %}border-teal-400/40 text-teal-800 bg-teal-50{% endif %}">
+                {{ message }}
             </div>
             {% endfor %}
         </div>
+        {% endif %}
+
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="glass-card rounded-2xl p-5">
+                <p class="text-slate-500 text-sm mb-1">Flashcards</p>
+                <p class="text-3xl font-semibold text-slate-900">{{ questions|length }}</p>
+                <p class="text-xs text-slate-500 mt-1">Generated for this set</p>
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+                <p class="text-slate-500 text-sm mb-1">Reviewed</p>
+                <p class="text-3xl font-semibold text-slate-900">{{ reviewed_count }}</p>
+                <p class="text-xs text-slate-500 mt-1">Marked as done</p>
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+                <p class="text-slate-500 text-sm mb-1">Progress</p>
+                <div class="h-2 bg-slate-200 rounded-full mt-2 overflow-hidden">
+                    <div class="h-full bg-teal-500" style="width: {{ progress }}%;"></div>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">{{ progress }}% complete</p>
+            </div>
+        </section>
+
+        <section class="glass-card rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold text-slate-900">Flashcards</h2>
+                <p class="text-sm text-slate-500">Click “Reveal” to study, then mark reviewed.</p>
+            </div>
+            <div class="grid grid-cols-1 gap-3">
+                {% for question in questions %}
+                <div class="rounded-xl border border-slate-200 p-4 bg-white/90 shadow-sm">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="text-xs uppercase tracking-[0.2em] text-teal-700">Card {{ forloop.counter }}</div>
+                        <form method="POST" action="{% url 'toggle_review' question.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="text-xs px-3 py-1.5 rounded-full border {% if question.reviewed %}bg-teal-500 text-white border-teal-500{% else %}border-slate-300 text-slate-700 hover:border-teal-400 hover:text-teal-700{% endif %}">
+                                {% if question.reviewed %}Reviewed{% else %}Mark reviewed{% endif %}
+                            </button>
+                        </form>
+                    </div>
+                    <p class="text-lg font-semibold mt-2 text-slate-900"><span class="text-amber-700">Q:</span> {{ question.question_text }}</p>
+                    <details class="mt-2 group">
+                        <summary class="text-sm text-teal-700 cursor-pointer select-none">Reveal answer</summary>
+                        <p class="mt-2 text-slate-800 leading-relaxed"><span class="text-teal-700 font-semibold">A:</span> {{ question.answer_text }}</p>
+                    </details>
+                </div>
+                {% empty %}
+                <div class="text-slate-500 text-sm">No flashcards yet. Click “Regenerate Q&A” to create them.</div>
+                {% endfor %}
+            </div>
+        </section>
     </div>
 </body>
 </html>

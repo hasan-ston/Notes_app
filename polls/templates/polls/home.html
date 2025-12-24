@@ -3,39 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Study Notes</title>
+    <title>Study Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(15, 23, 42, 0.08); backdrop-filter: blur(8px); box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08); }
+        .hero-gradient { background: radial-gradient(circle at 20% 20%, rgba(45, 212, 191, 0.28), transparent 35%), radial-gradient(circle at 80% 0%, rgba(251, 191, 36, 0.25), transparent 30%), linear-gradient(135deg, #eef2ff 0%, #f8fafc 50%, #ecfeff 100%); }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="max-w-4xl mx-auto p-8">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-4xl font-bold text-gray-800 mb-2">📚 My Study Notes</h1>
-            <p class="text-gray-600">AI-powered question generation from your notes</p>
-        </div>
+<body class="min-h-screen">
+    <div class="hero-gradient absolute inset-0 -z-10"></div>
+    <div class="max-w-6xl mx-auto px-6 py-10 space-y-8 relative">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-[0.35em] text-teal-700">Flashcard Lab</p>
+                <h1 class="text-4xl md:text-5xl font-semibold mt-2 text-slate-900">Study Dashboard</h1>
+                <p class="text-slate-600 mt-2 max-w-xl">Upload notes, auto-generate flashcards, and track reviewed progress by subject.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/admin/" class="glass-card px-4 py-2 rounded-xl text-sm text-slate-800 hover:-translate-y-0.5 transition">Admin</a>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="glass-card px-4 py-2 rounded-xl text-sm text-slate-800 hover:-translate-y-0.5 transition">Get Gemini Key</a>
+            </div>
+        </header>
 
-        <!-- Note Sets Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {% for note in note_set %}
-            <a href="/details/{{ note.id }}/"
-               class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <h3 class="text-xl font-semibold text-gray-800 mb-2">
-                    {{ note.title }}
-                </h3>
-                <p class="text-sm text-gray-500">
-                    Uploaded: {{ note.uploaded_at|date:"M d, Y" }}
-                </p>
-            </a>
+        {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+            <div class="glass-card text-sm px-4 py-3 rounded-xl {% if message.tags == 'error' %}border-red-400/60 text-red-800 bg-red-50{% else %}border-teal-400/40 text-teal-800 bg-teal-50{% endif %}">
+                {{ message }}
+            </div>
             {% endfor %}
         </div>
-
-        <!-- Empty state if no notes -->
-        {% if not note_set %}
-        <div class="bg-white rounded-lg shadow-md p-12 text-center">
-            <p class="text-gray-500 text-lg">No notes uploaded yet</p>
-            <p class="text-gray-400 mt-2">Go to <a href="/admin/" class="text-blue-500 hover:underline">admin panel</a> to upload your first note</p>
-        </div>
         {% endif %}
+
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="glass-card rounded-2xl p-5">
+                <p class="text-slate-500 text-sm mb-2">Note Sets</p>
+                <p class="text-3xl font-semibold text-slate-900">{{ stats.notes }}</p>
+                <p class="text-xs text-slate-500 mt-1">Total uploaded</p>
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+                <p class="text-slate-500 text-sm mb-2">Flashcards</p>
+                <p class="text-3xl font-semibold text-slate-900">{{ stats.questions }}</p>
+                <p class="text-xs text-slate-500 mt-1">Generated so far</p>
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+                <p class="text-slate-500 text-sm mb-2">Reviewed</p>
+                <p class="text-3xl font-semibold text-slate-900">{{ stats.reviewed }}</p>
+                <p class="text-xs text-slate-500 mt-1">Marked complete</p>
+            </div>
+        </section>
+
+        <section class="glass-card rounded-2xl p-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-2xl font-semibold text-slate-900">Create a new set</h2>
+                    <p class="text-slate-500 text-sm">PDF, DOCX, or TXT. Subject is optional but helps organize the dashboard.</p>
+                </div>
+            </div>
+            <form class="grid grid-cols-1 md:grid-cols-3 gap-4" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="md:col-span-1">
+                    <label class="text-sm text-slate-700">Title</label>
+                    <input name="title" required placeholder="e.g., Week 3 Biology" class="w-full mt-2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-400/60">
+                </div>
+                <div class="md:col-span-1">
+                    <label class="text-sm text-slate-700">Subject</label>
+                    <input name="subject" placeholder="Biology, Calculus..." class="w-full mt-2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-300/60">
+                </div>
+                <div class="md:col-span-1">
+                    <label class="text-sm text-slate-700">Upload</label>
+                    <input name="content" type="file" accept=".pdf,.doc,.docx,.txt" required class="w-full mt-2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-teal-500 file:text-slate-900 focus:outline-none">
+                </div>
+                <div class="md:col-span-3 flex justify-end">
+                    <button type="submit" class="bg-teal-500 text-white font-semibold px-5 py-2 rounded-xl hover:-translate-y-0.5 transition shadow-lg shadow-teal-500/30">Upload & Generate Later</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-slate-900">Subjects</h2>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="/" class="px-3 py-1.5 rounded-full text-sm border {% if not subject_filter %}bg-teal-500 text-white border-teal-500{% else %}border-slate-200 text-slate-700 hover:border-teal-400 hover:text-teal-700{% endif %}">All</a>
+                {% for subject in subject_summary %}
+                {% if subject.subject %}
+                <a href="/?subject={{ subject.subject }}" class="px-3 py-1.5 rounded-full text-sm border {% if subject_filter == subject.subject %}bg-teal-500 text-white border-teal-500{% else %}border-slate-200 text-slate-700 hover:border-teal-400 hover:text-teal-700{% endif %}">
+                    {{ subject.subject }} <span class="text-xs opacity-70 text-slate-500">({{ subject.total }})</span>
+                </a>
+                {% endif %}
+                {% endfor %}
+                {% if subject_summary|length == 0 %}
+                <span class="text-sm text-slate-500">No subjects yet</span>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold text-slate-900">Your note sets</h2>
+                <p class="text-sm text-slate-500">{{ note_set|length }} showing</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for note in note_set %}
+                <div class="glass-card rounded-2xl p-5 flex flex-col gap-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs uppercase tracking-[0.2em] text-amber-600/80">{{ note.subject|default_if_none:"General"|default:"General" }}</p>
+                            <h3 class="text-xl font-semibold text-slate-900">{{ note.title }}</h3>
+                        </div>
+                        <span class="text-xs text-slate-500">{{ note.uploaded_at|date:"M d" }}</span>
+                    </div>
+                    <div class="text-sm text-slate-600">
+                        {{ note.questions_set.count }} flashcards · tap to review
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="{% url 'details' note.id %}" class="flex-1 text-center bg-teal-500 text-white font-semibold px-4 py-2 rounded-xl hover:-translate-y-0.5 transition shadow-lg shadow-teal-500/20">Open</a>
+                        <a href="{{ note.content.url }}" target="_blank" class="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-700 hover:border-teal-400 hover:text-teal-700">Source</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if not note_set %}
+            <div class="glass-card rounded-2xl p-8 text-center text-slate-600">
+                No notes yet. Upload your first file above.
+            </div>
+            {% endif %}
+        </section>
     </div>
 </body>
 </html>

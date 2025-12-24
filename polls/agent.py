@@ -3,7 +3,18 @@ from langgraph.graph import StateGraph, END
 from google import genai
 from django.conf import settings
 
-client = genai.Client(api_key=settings.GEMINI_API_KEY)
+_client = None
+
+
+def _get_client():
+    """Lazy init for the Gemini client so startup does not fail without a key."""
+    global _client
+    if _client:
+        return _client
+    if not settings.GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY is not configured")
+    _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    return _client
 
 # Define the state that flows through the agent
 class AgentState(TypedDict):
@@ -43,7 +54,7 @@ Q: [question]
 A: [answer]
 """
 
-    response = client.models.generate_content(
+    response = _get_client().models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt
     )
@@ -97,7 +108,7 @@ Rate from 1-10 where:
 Respond with ONLY a number from 1-10.
 """
 
-    response = client.models.generate_content(
+    response = _get_client().models.generate_content(
         model="gemini-2.5-flash",
         contents=eval_prompt
     )

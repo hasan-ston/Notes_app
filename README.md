@@ -10,6 +10,7 @@ An AI-powered web application that automatically generates quiz questions from u
 - **Self-Improving**: Agent iteratively refines questions (up to 3 attempts) until quality threshold is met
 - **Quality Tracking**: Keeps the best set of questions across multiple generation attempts
 - **Modern UI**: Clean, responsive interface built with Tailwind CSS
+- **Dashboard & Flashcards**: Upload directly from the homepage, group by subject, track reviewed progress, and study in flashcard mode
 
 ## 🤖 What Makes This "Agentic"?
 
@@ -62,14 +63,21 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 3. **Install dependencies**
 ```bash
-pip install django google-generativeai langgraph langchain-google-genai langchain-core llama-index llama-index-readers-file pymupdf
+pip install -r requirements.txt
 ```
 
-4. **Configure API Key**
+4. **Configure environment**
 
-Add your Gemini API key to `todo_app/settings.py`:
-```python
-GEMINI_API_KEY = "your_api_key_here"
+Create a `.env` file with:
+```bash
+GEMINI_API_KEY=your_api_key_here
+NOTES_API_KEY=choose_a_private_key_for_the_http_api
+DJANGO_SECRET_KEY=change_me
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+DJANGO_CSRF_TRUSTED_ORIGINS=http://127.0.0.1:8000,http://localhost:8000
+# Optional for Postgres in production:
+# DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME
 ```
 
 5. **Run migrations**
@@ -94,17 +102,15 @@ Visit `http://127.0.0.1:8000/` to use the app!
 
 ### Uploading Notes
 
-1. Go to `http://127.0.0.1:8000/admin/`
-2. Login with your superuser credentials
-3. Click "Note_sets" → "Add Note_set"
-4. Enter a title and upload your document (PDF, DOCX, or TXT)
-5. Save
+1. Go to `http://127.0.0.1:8000/`
+2. Use the upload form on the dashboard (title, subject, file)
+3. Click into the new card to generate or study flashcards
 
 ### Generating Questions
 
-1. Go to the home page (`/`)
-2. Click on a note set
-3. Click "Generate Q&A" button
+1. From the dashboard, click a note card to open it
+2. Click "Regenerate Q&A" to refresh flashcards
+3. Study with the flashcards section; mark cards reviewed as you go
 4. Watch the terminal to see the agent working:
    - Generating questions
    - Evaluating quality
@@ -208,6 +214,13 @@ In `polls/agent.py`, change the prompt:
 ```python
 prompt = f"""Generate 5 quiz questions...  # Change number here
 ```
+
+## 🚀 Deployment checklist
+
+- Set `DJANGO_DEBUG=False`, `DJANGO_SECRET_KEY`, `GEMINI_API_KEY`, `NOTES_API_KEY`, `DJANGO_ALLOWED_HOSTS`, and `DJANGO_CSRF_TRUSTED_ORIGINS`.
+- Use Postgres (set `DATABASE_URL`) instead of the committed SQLite file.
+- Run `python manage.py collectstatic` (WhiteNoise serves static files) and use the provided `Procfile` with `gunicorn`.
+- Ensure Tesseract is available if you want OCR on scanned PDFs; otherwise PyMuPDF will extract text if present.
 
 ## 🐛 Troubleshooting
 
