@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'polls',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -131,6 +132,13 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # tells django to save it in media folder in project directory
+
+if os.environ.get("AWS_STORAGE_BUCKET_NAME"):
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME")
+    AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL")
+    AWS_QUERYSTRING_AUTH = False  # set True for signed URLs
+    AWS_S3_FILE_OVERWRITE = False
 
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
