@@ -26,7 +26,10 @@
             <div class="flex items-center gap-3">
                 {% if request.user.is_authenticated %}
                 <span class="text-sm text-slate-600">Hi, {{ request.user.username }}</span>
-                <a href="/accounts/logout/" class="glass-card px-4 py-2 rounded-xl text-sm text-slate-800 hover:-translate-y-0.5 transition">Logout</a>
+                <form method="post" action="/accounts/logout/" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="glass-card px-4 py-2 rounded-xl text-sm text-slate-800 hover:-translate-y-0.5 transition">Logout</button>
+                </form>
                 {% else %}
                 <a href="/accounts/login/" class="glass-card px-4 py-2 rounded-xl text-sm text-slate-800 hover:-translate-y-0.5 transition">Login</a>
                 <a href="/accounts/signup/" class="glass-card px-4 py-2 rounded-xl text-sm text-slate-800 hover:-translate-y-0.5 transition">Sign up</a>
