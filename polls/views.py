@@ -26,8 +26,11 @@ def index(request):
         title = request.POST.get("title", "").strip()
         subject = request.POST.get("subject", "").strip()
         uploaded_file = request.FILES.get("content")
+        max_size_bytes = int(os.environ.get("MAX_UPLOAD_BYTES", 5 * 1024 * 1024))  # default 5MB
         if not title or not uploaded_file:
             messages.error(request, "Title and file are required to create a flashcard set.")
+        elif uploaded_file.size > max_size_bytes:
+            messages.error(request, f"File too large. Max size is {max_size_bytes // (1024 * 1024)} MB.")
         else:
             Note_set.objects.create(title=title, subject=subject, content=uploaded_file, user=request.user)
             messages.success(request, "Note uploaded. You can now generate flashcards.")
@@ -71,7 +74,7 @@ def note_detail(request, id):
 
 
 def _extract_text_from_path(file_path: str) -> str:
-    """Extract text from txt or pdf paths, with a best-effort OCR fallback."""
+    """Extract text from txt or pdf paths. OCR is off by default to reduce memory/CPU; enable via OCR_ENABLED=1."""
     extracted_text = ""
     if file_path.lower().endswith(".txt"):
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -79,12 +82,14 @@ def _extract_text_from_path(file_path: str) -> str:
     else:
         doc = pymupdf.open(file_path)
         for page in doc:
-            try:
-                textpage = page.get_textpage_ocr()
-                extracted_text += page.get_text(textpage=textpage)
-            except RuntimeError:
-                # Fallback when Tesseract OCR is unavailable; still use PyMuPDF text extraction.
-                extracted_text += page.get_text()
+            if os.environ.get("OCR_ENABLED", "").lower() in ("1", "true", "yes"):
+                try:
+                    textpage = page.get_textpage_ocr()
+                    extracted_text += page.get_text(textpage=textpage)
+                    continue
+                except RuntimeError:
+                    pass
+            extracted_text += page.get_text()
         doc.close()
     return extracted_text
 
@@ -134,6 +139,14 @@ def generate_questions_view(request, id):
     messages.success(request, "Flashcards refreshed.")
     return redirect('details', id=id)
 
+@login_required
+@require_POST
+def delete_note(request, id):
+    note_set = get_object_or_404(Note_set, id=id, user=request.user)
+    note_set.delete()
+    messages.success(request, "Note deleted.")
+    return redirect("home")
+
 
 @login_required
 @require_POST
@@ -142,6 +155,22 @@ def toggle_review(request, question_id):
     question.reviewed = not question.reviewed
     question.save(update_fields=['reviewed'])
     return redirect('details', id=question.note_set.id)
+
+
+@login_required
+@require_POST
+def update_question(request, question_id):
+    question = get_object_or_404(Questions, id=question_id, note_set__user=request.user)
+    new_q = request.POST.get("question_text", "").strip()
+    new_a = request.POST.get("answer_text", "").strip()
+    if not new_q or not new_a:
+        messages.error(request, "Question and answer cannot be empty.")
+    else:
+        question.question_text = new_q
+        question.answer_text = new_a
+        question.save(update_fields=["question_text", "answer_text"])
+        messages.success(request, "Flashcard updated.")
+    return redirect("details", id=question.note_set.id)
 
 
 def signup(request):
