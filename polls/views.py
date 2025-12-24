@@ -1,7 +1,9 @@
 import json
 import os
 import tempfile
+import time
 
+import boto3
 import pymupdf
 import requests
 from django.conf import settings
@@ -10,6 +12,7 @@ from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import Count
 from django.http import JsonResponse
@@ -73,24 +76,93 @@ def note_detail(request, id):
     return render(request, "polls/details.html", context)
 
 
-def _extract_text_from_path(file_path: str) -> str:
-    """Extract text from txt or pdf paths. OCR is off by default to reduce memory/CPU; enable via OCR_ENABLED=1."""
+def _textract_client():
+    return boto3.client(
+        "textract",
+        region_name=os.environ.get("AWS_TEXTRACT_REGION") or os.environ.get("AWS_REGION"),
+    )
+
+
+def _textract_sync_from_bytes(data: bytes) -> str:
+    """Use Textract sync API for small images/1–2 page PDFs."""
+    client = _textract_client()
+    resp = client.detect_document_text(Document={"Bytes": data})
+    lines = [b["Text"] for b in resp.get("Blocks", []) if b.get("BlockType") == "LINE"]
+    return "\n".join(lines)
+
+
+def _textract_async_from_s3(bucket: str, key: str, max_polls: int = 10, delay: float = 2.0) -> str:
+    """Use Textract async API for multi-page PDFs stored in S3."""
+    client = _textract_client()
+    start = client.start_document_text_detection(
+        DocumentLocation={"S3Object": {"Bucket": bucket, "Name": key}}
+    )
+    job_id = start["JobId"]
+    for _ in range(max_polls):
+        time.sleep(delay)
+        result = client.get_document_text_detection(JobId=job_id)
+        status = result.get("JobStatus")
+        if status == "IN_PROGRESS":
+            continue
+        if status != "SUCCEEDED":
+            raise RuntimeError(f"Textract job failed: {status}")
+        blocks = result.get("Blocks", [])
+        lines = [b["Text"] for b in blocks if b.get("BlockType") == "LINE"]
+        return "\n".join(lines)
+    raise TimeoutError("Textract job did not complete in time")
+
+
+def _extract_text_from_path(file_path: str, storage_key: str | None = None, file_size: int | None = None) -> str:
+    """
+    Extract text from txt or pdf paths.
+    - First, try native text extraction.
+    - If OCR_PROVIDER=textract, use Textract (sync for small files, async for larger PDFs in S3).
+    - OCR via PyMuPDF is disabled by default (OCR_ENABLED) to avoid high CPU/RAM.
+    """
     extracted_text = ""
-    if file_path.lower().endswith(".txt"):
+    lower = file_path.lower()
+
+    # Text files: just read
+    if lower.endswith(".txt"):
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            extracted_text = f.read()
-    else:
+            return f.read()
+
+    # Try native text extraction first (fast path)
+    doc = pymupdf.open(file_path)
+    for page in doc:
+        extracted_text += page.get_text()
+    doc.close()
+    if extracted_text.strip():
+        return extracted_text
+
+    # Optional PyMuPDF OCR (off by default)
+    if os.environ.get("OCR_ENABLED", "").lower() in ("1", "true", "yes"):
         doc = pymupdf.open(file_path)
         for page in doc:
-            if os.environ.get("OCR_ENABLED", "").lower() in ("1", "true", "yes"):
-                try:
-                    textpage = page.get_textpage_ocr()
-                    extracted_text += page.get_text(textpage=textpage)
-                    continue
-                except RuntimeError:
-                    pass
-            extracted_text += page.get_text()
+            try:
+                textpage = page.get_textpage_ocr()
+                extracted_text += page.get_text(textpage=textpage)
+            except RuntimeError:
+                extracted_text += page.get_text()
         doc.close()
+        if extracted_text.strip():
+            return extracted_text
+
+    # Textract path
+    if os.environ.get("OCR_PROVIDER", "").lower() == "textract":
+        # Sync for small files/images
+        size = file_size or os.path.getsize(file_path)
+        if size <= 5 * 1024 * 1024:
+            with open(file_path, "rb") as f:
+                data = f.read()
+            return _textract_sync_from_bytes(data)
+
+        # Async for larger PDFs in S3
+        bucket = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+        if not bucket or not storage_key:
+            raise RuntimeError("Textract async requires AWS_STORAGE_BUCKET_NAME and storage key")
+        return _textract_async_from_s3(bucket, storage_key)
+
     return extracted_text
 
 
@@ -114,8 +186,27 @@ def _generate_questions_from_text(extracted_text: str):
 def generate_questions_view(request, id):
     note_set = get_object_or_404(Note_set, id=id, user=request.user)
 
-    file_path = note_set.content.path
-    extracted_text = _extract_text_from_path(file_path)
+    temp_path = None
+    storage_key = getattr(note_set.content, "name", None)
+    try:
+        try:
+            file_path = note_set.content.path
+        except (NotImplementedError, AttributeError):
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                with default_storage.open(storage_key, "rb") as src:
+                    for chunk in iter(lambda: src.read(8192), b""):
+                        tmp.write(chunk)
+                temp_path = tmp.name
+            file_path = temp_path
+
+        size_bytes = os.path.getsize(file_path)
+        extracted_text = _extract_text_from_path(file_path, storage_key=storage_key, file_size=size_bytes)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
     if not extracted_text.strip():
         messages.error(request, "Could not read text from the uploaded note. For scanned PDFs, install Tesseract or upload a text PDF/TXT file.")
