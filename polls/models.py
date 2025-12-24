@@ -18,8 +18,8 @@ class Questions(models.Model):
     # Each question is linked to one note_set. on_delete tells django to delete all questions if
     # linked note_set is deleted.
     note_set = models.ForeignKey(Note_set, on_delete=models.CASCADE)
-    question_text = models.CharField(max_length=300)
-    answer_text = models.CharField(max_length=300)
+    question_text = models.TextField()
+    answer_text = models.TextField()
     creation_date = models.DateTimeField(auto_now_add=True)
     reviewed = models.BooleanField(default = False)
 
