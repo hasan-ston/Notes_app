@@ -19,9 +19,11 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods
+import logging
 
 from .models import Note_set, Questions
 
+logger = logging.getLogger(__name__)
 
 @login_required
 def index(request):
@@ -188,6 +190,7 @@ def generate_questions_view(request, id):
 
     temp_path = None
     storage_key = getattr(note_set.content, "name", None)
+    logger.info("Processing note %s storage_key=%s storage=%s", note_set.id, storage_key, default_storage.__class__.__name__)
     try:
         try:
             file_path = note_set.content.path

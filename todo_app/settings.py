@@ -22,6 +22,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ['true', '1', 'yes']
+DJANGO_LOG_LEVEL = os.environ.get("DJANGO_LOG_LEVEL", "INFO")
 
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if host.strip()]
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
@@ -131,6 +132,16 @@ if os.environ.get("AWS_STORAGE_BUCKET_NAME"):
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+# Temporary logging to surface storage backend in logs when DEBUG is enabled
+if DEBUG:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.setLevel(DJANGO_LOG_LEVEL)
+    try:
+        logger.info("Storage backend: %s", globals().get("DEFAULT_FILE_STORAGE", "not set"))
+    except Exception:
+        pass
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
