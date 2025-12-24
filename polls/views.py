@@ -6,6 +6,8 @@ import pymupdf
 import requests
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import transaction
@@ -140,6 +142,23 @@ def toggle_review(request, question_id):
     question.reviewed = not question.reviewed
     question.save(update_fields=['reviewed'])
     return redirect('details', id=question.note_set.id)
+
+
+def signup(request):
+    """Simple sign-up that creates a user and logs them in."""
+    if request.user.is_authenticated:
+        return redirect("home")
+
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect("home")
+    else:
+        form = UserCreationForm()
+
+    return render(request, "registration/signup.html", {"form": form})
 
 
 def _download_file_to_temp(url: str) -> str:

@@ -267,3 +267,4 @@ Built by a first-year undergraduate student learning Django and AI integration.
 ---
 
 **Note**: This is a development project. For production use, implement proper environment variable management, error handling, and security measures.
+- **Authentication**: Sign up/sign in required; each user sees only their own note sets. Admin URL can be customized via `ADMIN_URL`.

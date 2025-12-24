@@ -9,5 +9,6 @@ urlpatterns = [
     path('generate/<int:id>/', views.generate_questions_view, name='generate_questions'),
     path('questions/<int:question_id>/toggle/', views.toggle_review, name='toggle_review'),
     path('api/generate-questions/', views.api_generate_questions, name='api_generate_questions'),
+    path('accounts/signup/', views.signup, name='signup'),
 ]
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
